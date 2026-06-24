@@ -22,6 +22,7 @@ import altair as alt
 import strategies
 import markets
 S = strategies  # alias for the indicator helpers (S._ema, S._adx, ...)
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 try:
     import kite_helper          # optional Zerodha Kite Connect integration
