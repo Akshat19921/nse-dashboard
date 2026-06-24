@@ -1,0 +1,274 @@
+Symbol,Name,Segment
+RELIANCE.NS,Reliance Industries,Large
+HDFCBANK.NS,HDFC Bank,Large
+ICICIBANK.NS,ICICI Bank,Large
+INFY.NS,Infosys,Large
+TCS.NS,Tata Consultancy Services,Large
+BHARTIARTL.NS,Bharti Airtel,Large
+SBIN.NS,State Bank of India,Large
+LT.NS,Larsen & Toubro,Large
+ITC.NS,ITC,Large
+HINDUNILVR.NS,Hindustan Unilever,Large
+KOTAKBANK.NS,Kotak Mahindra Bank,Large
+AXISBANK.NS,Axis Bank,Large
+BAJFINANCE.NS,Bajaj Finance,Large
+M&M.NS,Mahindra & Mahindra,Large
+MARUTI.NS,Maruti Suzuki,Large
+SUNPHARMA.NS,Sun Pharmaceutical,Large
+NTPC.NS,NTPC,Large
+TATAMOTORS.NS,Tata Motors,Large
+HCLTECH.NS,HCL Technologies,Large
+TITAN.NS,Titan Company,Large
+POWERGRID.NS,Power Grid Corporation,Large
+ULTRACEMCO.NS,UltraTech Cement,Large
+ASIANPAINT.NS,Asian Paints,Large
+TATASTEEL.NS,Tata Steel,Large
+BAJAJFINSV.NS,Bajaj Finserv,Large
+NESTLEIND.NS,Nestle India,Large
+WIPRO.NS,Wipro,Large
+ADANIENT.NS,Adani Enterprises,Large
+ADANIPORTS.NS,Adani Ports & SEZ,Large
+ONGC.NS,Oil & Natural Gas Corp,Large
+COALINDIA.NS,Coal India,Large
+JSWSTEEL.NS,JSW Steel,Large
+GRASIM.NS,Grasim Industries,Large
+HINDALCO.NS,Hindalco Industries,Large
+TECHM.NS,Tech Mahindra,Large
+BAJAJ-AUTO.NS,Bajaj Auto,Large
+INDUSINDBK.NS,IndusInd Bank,Large
+BPCL.NS,Bharat Petroleum,Large
+DRREDDY.NS,Dr Reddy's Laboratories,Large
+CIPLA.NS,Cipla,Large
+BRITANNIA.NS,Britannia Industries,Large
+EICHERMOT.NS,Eicher Motors,Large
+APOLLOHOSP.NS,Apollo Hospitals,Large
+HEROMOTOCO.NS,Hero MotoCorp,Large
+TATACONSUM.NS,Tata Consumer Products,Large
+SBILIFE.NS,SBI Life Insurance,Large
+HDFCLIFE.NS,HDFC Life Insurance,Large
+SHRIRAMFIN.NS,Shriram Finance,Large
+LTIM.NS,LTIMindtree,Large
+TRENT.NS,Trent,Large
+BEL.NS,Bharat Electronics,Large
+JIOFIN.NS,Jio Financial Services,Large
+LICI.NS,Life Insurance Corp of India,Large
+HAL.NS,Hindustan Aeronautics,Large
+ADANIGREEN.NS,Adani Green Energy,Large
+ADANIPOWER.NS,Adani Power,Large
+ADANIENSOL.NS,Adani Energy Solutions,Large
+AMBUJACEM.NS,Ambuja Cements,Large
+DLF.NS,DLF,Large
+BANKBARODA.NS,Bank of Baroda,Large
+GAIL.NS,GAIL India,Large
+VEDL.NS,Vedanta,Large
+PNB.NS,Punjab National Bank,Large
+IOC.NS,Indian Oil Corporation,Large
+ETERNAL.NS,Eternal (Zomato),Large
+BAJAJHLDNG.NS,Bajaj Holdings & Investment,Large
+SIEMENS.NS,Siemens,Large
+PIDILITIND.NS,Pidilite Industries,Large
+GODREJCP.NS,Godrej Consumer Products,Large
+HAVELLS.NS,Havells India,Large
+DABUR.NS,Dabur India,Large
+MARICO.NS,Marico,Large
+COLPAL.NS,Colgate-Palmolive India,Large
+ICICIPRULI.NS,ICICI Prudential Life,Large
+ICICIGI.NS,ICICI Lombard General Insurance,Large
+SBICARD.NS,SBI Cards & Payment Services,Large
+CHOLAFIN.NS,Cholamandalam Investment,Large
+HDFCAMC.NS,HDFC Asset Management,Large
+NAUKRI.NS,Info Edge India,Large
+DMART.NS,Avenue Supermarts,Large
+PFC.NS,Power Finance Corporation,Large
+RECLTD.NS,REC,Large
+IRFC.NS,Indian Railway Finance Corp,Large
+INDIGO.NS,InterGlobe Aviation,Large
+TVSMOTOR.NS,TVS Motor Company,Large
+VBL.NS,Varun Beverages,Large
+TATAPOWER.NS,Tata Power,Large
+JINDALSTEL.NS,Jindal Steel & Power,Large
+CANBK.NS,Canara Bank,Large
+MOTHERSON.NS,Samvardhana Motherson,Large
+BOSCHLTD.NS,Bosch,Large
+MUTHOOTFIN.NS,Muthoot Finance,Large
+LODHA.NS,Macrotech Developers,Large
+TORNTPHARM.NS,Torrent Pharmaceuticals,Large
+MANKIND.NS,Mankind Pharma,Large
+ZYDUSLIFE.NS,Zydus Lifesciences,Large
+NHPC.NS,NHPC,Large
+UNITDSPR.NS,United Spirits,Large
+CGPOWER.NS,CG Power & Industrial Solutions,Large
+BHARATFORG.NS,Bharat Forge,Large
+PERSISTENT.NS,Persistent Systems,Mid
+COFORGE.NS,Coforge,Mid
+MPHASIS.NS,Mphasis,Mid
+OFSS.NS,Oracle Financial Services,Mid
+LTTS.NS,L&T Technology Services,Mid
+KPITTECH.NS,KPIT Technologies,Mid
+TATAELXSI.NS,Tata Elxsi,Mid
+CYIENT.NS,Cyient,Mid
+BSOFT.NS,Birlasoft,Mid
+TATATECH.NS,Tata Technologies,Mid
+SONACOMS.NS,Sona BLW Precision Forgings,Mid
+AUBANK.NS,AU Small Finance Bank,Mid
+FEDERALBNK.NS,Federal Bank,Mid
+IDFCFIRSTB.NS,IDFC First Bank,Mid
+BANDHANBNK.NS,Bandhan Bank,Mid
+INDIANB.NS,Indian Bank,Mid
+UNIONBANK.NS,Union Bank of India,Mid
+BANKINDIA.NS,Bank of India,Mid
+YESBANK.NS,Yes Bank,Mid
+RBLBANK.NS,RBL Bank,Mid
+LICHSGFIN.NS,LIC Housing Finance,Mid
+M&MFIN.NS,Mahindra & Mahindra Financial,Mid
+SUNDARMFIN.NS,Sundaram Finance,Mid
+MANAPPURAM.NS,Manappuram Finance,Mid
+PNBHOUSING.NS,PNB Housing Finance,Mid
+IIFL.NS,IIFL Finance,Mid
+ABCAPITAL.NS,Aditya Birla Capital,Mid
+POONAWALLA.NS,Poonawalla Fincorp,Mid
+LTF.NS,L&T Finance,Mid
+MFSL.NS,Max Financial Services,Mid
+BAJAJHFL.NS,Bajaj Housing Finance,Mid
+CREDITACC.NS,CreditAccess Grameen,Mid
+KARURVYSYA.NS,Karur Vysya Bank,Mid
+CUB.NS,City Union Bank,Mid
+HUDCO.NS,Housing & Urban Development Corp,Mid
+IREDA.NS,Indian Renewable Energy Dev Agency,Mid
+BSE.NS,BSE,Mid
+CDSL.NS,Central Depository Services,Mid
+CAMS.NS,Computer Age Management Services,Mid
+MCX.NS,Multi Commodity Exchange,Mid
+ANGELONE.NS,Angel One,Mid
+360ONE.NS,360 ONE WAM,Mid
+KFINTECH.NS,KFin Technologies,Mid
+PAYTM.NS,One97 Communications (Paytm),Mid
+POLICYBZR.NS,PB Fintech (Policybazaar),Mid
+NYKAA.NS,FSN E-Commerce (Nykaa),Mid
+AUROPHARMA.NS,Aurobindo Pharma,Mid
+LUPIN.NS,Lupin,Mid
+ALKEM.NS,Alkem Laboratories,Mid
+IPCALAB.NS,IPCA Laboratories,Mid
+BIOCON.NS,Biocon,Mid
+GLENMARK.NS,Glenmark Pharmaceuticals,Mid
+ABBOTINDIA.NS,Abbott India,Mid
+AJANTPHARM.NS,Ajanta Pharma,Mid
+LAURUSLABS.NS,Laurus Labs,Mid
+NATCOPHARM.NS,Natco Pharma,Mid
+PEL.NS,Piramal Enterprises,Mid
+GRANULES.NS,Granules India,Mid
+JBCHEPHARM.NS,JB Chemicals & Pharmaceuticals,Mid
+ERIS.NS,Eris Lifesciences,Mid
+MAXHEALTH.NS,Max Healthcare Institute,Mid
+FORTIS.NS,Fortis Healthcare,Mid
+LALPATHLAB.NS,Dr Lal PathLabs,Mid
+METROPOLIS.NS,Metropolis Healthcare,Mid
+GLAND.NS,Gland Pharma,Mid
+SYNGENE.NS,Syngene International,Mid
+ASHOKLEY.NS,Ashok Leyland,Mid
+MRF.NS,MRF,Mid
+BALKRISIND.NS,Balkrishna Industries,Mid
+APOLLOTYRE.NS,Apollo Tyres,Mid
+CEATLTD.NS,CEAT,Mid
+EXIDEIND.NS,Exide Industries,Mid
+ENDURANCE.NS,Endurance Technologies,Mid
+SCHAEFFLER.NS,Schaeffler India,Mid
+TIMKEN.NS,Timken India,Mid
+SKFINDIA.NS,SKF India,Mid
+SUNDRMFAST.NS,Sundram Fasteners,Mid
+UNOMINDA.NS,Uno Minda,Mid
+ESCORTS.NS,Escorts Kubota,Mid
+ACC.NS,ACC,Mid
+DALBHARAT.NS,Dalmia Bharat,Mid
+JKCEMENT.NS,JK Cement,Mid
+RAMCOCEM.NS,The Ramco Cements,Mid
+SHREECEM.NS,Shree Cement,Mid
+GODREJPROP.NS,Godrej Properties,Mid
+OBEROIRLTY.NS,Oberoi Realty,Mid
+PHOENIXLTD.NS,The Phoenix Mills,Mid
+PRESTIGE.NS,Prestige Estates Projects,Mid
+BRIGADE.NS,Brigade Enterprises,Mid
+NCC.NS,NCC,Mid
+NBCC.NS,NBCC (India),Mid
+KEC.NS,KEC International,Mid
+RVNL.NS,Rail Vikas Nigam,Mid
+IRCON.NS,Ircon International,Mid
+CONCOR.NS,Container Corporation of India,Mid
+GMRAIRPORT.NS,GMR Airports,Mid
+IRCTC.NS,Indian Railway Catering & Tourism,Mid
+NMDC.NS,NMDC,Mid
+SAIL.NS,Steel Authority of India,Mid
+HINDZINC.NS,Hindustan Zinc,Mid
+NATIONALUM.NS,National Aluminium,Mid
+APLAPOLLO.NS,APL Apollo Tubes,Mid
+JSL.NS,Jindal Stainless,Mid
+LLOYDSME.NS,Lloyds Metals & Energy,Mid
+ABB.NS,ABB India,Mid
+THERMAX.NS,Thermax,Mid
+HONAUT.NS,Honeywell Automation India,Mid
+CUMMINSIND.NS,Cummins India,Mid
+KIRLOSENG.NS,Kirloskar Oil Engines,Mid
+BHEL.NS,Bharat Heavy Electricals,Mid
+BDL.NS,Bharat Dynamics,Mid
+MAZDOCK.NS,Mazagon Dock Shipbuilders,Mid
+COCHINSHIP.NS,Cochin Shipyard,Mid
+SOLARINDS.NS,Solar Industries India,Mid
+SUZLON.NS,Suzlon Energy,Mid
+INOXWIND.NS,Inox Wind,Mid
+PIIND.NS,PI Industries,Mid
+SRF.NS,SRF,Mid
+DEEPAKNTR.NS,Deepak Nitrite,Mid
+AARTIIND.NS,Aarti Industries,Mid
+NAVINFLUOR.NS,Navin Fluorine International,Mid
+ATUL.NS,Atul,Mid
+VINATIORGA.NS,Vinati Organics,Mid
+FINEORG.NS,Fine Organic Industries,Mid
+TATACHEM.NS,Tata Chemicals,Mid
+GNFC.NS,Gujarat Narmada Valley Fertilizers,Mid
+COROMANDEL.NS,Coromandel International,Mid
+UPL.NS,UPL,Mid
+PAGEIND.NS,Page Industries,Mid
+ABFRL.NS,Aditya Birla Fashion & Retail,Mid
+RELAXO.NS,Relaxo Footwears,Mid
+BATAINDIA.NS,Bata India,Mid
+METROBRAND.NS,Metro Brands,Mid
+JUBLFOOD.NS,Jubilant FoodWorks,Mid
+DEVYANI.NS,Devyani International,Mid
+UBL.NS,United Breweries,Mid
+RADICO.NS,Radico Khaitan,Mid
+PATANJALI.NS,Patanjali Foods,Mid
+EMAMILTD.NS,Emami,Mid
+GODREJIND.NS,Godrej Industries,Mid
+HONASA.NS,Honasa Consumer (Mamaearth),Mid
+KALYANKJIL.NS,Kalyan Jewellers India,Mid
+KPRMILL.NS,K.P.R. Mill,Mid
+TRIDENT.NS,Trident,Mid
+TORNTPOWER.NS,Torrent Power,Mid
+JSWENERGY.NS,JSW Energy,Mid
+SJVN.NS,SJVN,Mid
+NLCINDIA.NS,NLC India,Mid
+CESC.NS,CESC,Mid
+PETRONET.NS,Petronet LNG,Mid
+GUJGASLTD.NS,Gujarat Gas,Mid
+IGL.NS,Indraprastha Gas,Mid
+MGL.NS,Mahanagar Gas,Mid
+GSPL.NS,Gujarat State Petronet,Mid
+OIL.NS,Oil India,Mid
+TATACOMM.NS,Tata Communications,Mid
+INDUSTOWER.NS,Indus Towers,Mid
+IDEA.NS,Vodafone Idea,Mid
+SUNTV.NS,Sun TV Network,Mid
+PVRINOX.NS,PVR INOX,Mid
+DELHIVERY.NS,Delhivery,Mid
+ASTRAL.NS,Astral,Mid
+SUPREMEIND.NS,Supreme Industries,Mid
+POLYCAB.NS,Polycab India,Mid
+KEI.NS,KEI Industries,Mid
+DIXON.NS,Dixon Technologies,Mid
+AMBER.NS,Amber Enterprises India,Mid
+VOLTAS.NS,Voltas,Mid
+BLUESTARCO.NS,Blue Star,Mid
+CROMPTON.NS,Crompton Greaves Consumer,Mid
+WHIRLPOOL.NS,Whirlpool of India,Mid
+KAJARIACER.NS,Kajaria Ceramics,Mid
+INDHOTEL.NS,Indian Hotels Company,Mid
