@@ -886,6 +886,40 @@ def positions_sheet_url():
         return None
 
 
+def positions_api_url():
+    """Google Apps Script web-app URL for two-way (read+write) positions sync."""
+    try:
+        return st.secrets.get("positions_api_url")
+    except Exception:
+        return None
+
+
+def _api_load_positions(url):
+    """Read positions live from the Apps Script web app (GET -> {rows: [...]})."""
+    import requests
+    r = requests.get(url, timeout=15)
+    data = r.json()
+    rows = data.get("rows") if isinstance(data, dict) else data
+    if not rows or len(rows) < 1:
+        return pd.DataFrame({"Symbol": [], "Buy Price": [], "Qty": []})
+    df = pd.DataFrame(rows[1:], columns=rows[0])
+    return _normalize_positions(df)
+
+
+def _api_save_positions(url, df):
+    """Overwrite the sheet with the edited table via the Apps Script web app (POST)."""
+    import requests, json
+    keep = df.copy()
+    keep["Symbol"] = keep["Symbol"].astype(str).str.strip().str.upper()
+    keep = keep[(keep["Symbol"] != "") & (keep["Symbol"] != "NAN")]
+    keep["Buy Price"] = pd.to_numeric(keep["Buy Price"], errors="coerce").fillna(0.0)
+    keep["Qty"] = pd.to_numeric(keep["Qty"], errors="coerce").fillna(0).astype(int)
+    rows = [["Symbol", "Buy Price", "Qty"]] + keep[["Symbol", "Buy Price", "Qty"]].values.tolist()
+    r = requests.post(url, data=json.dumps({"rows": rows}),
+                      headers={"Content-Type": "text/plain"}, timeout=15)
+    return r.status_code == 200
+
+
 def _normalize_positions(df):
     cols = {str(c).lower().strip(): c for c in df.columns}
     def pick(*keys):
@@ -903,7 +937,13 @@ def _normalize_positions(df):
 
 
 def _load_positions():
-    url = positions_sheet_url()                 # cross-device source (Google Sheet)
+    api = positions_api_url()                   # two-way source (live, read+write)
+    if api:
+        try:
+            return _api_load_positions(api)
+        except Exception:
+            pass
+    url = positions_sheet_url()                 # cross-device source (Google Sheet CSV)
     if url:
         try:
             return _normalize_positions(pd.read_csv(url))
@@ -1004,7 +1044,24 @@ def render_positions(strat, symbols, names):
             "Buy Price": st.column_config.NumberColumn("Buy Price", format="%.2f"),
             "Qty": st.column_config.NumberColumn("Qty", format="%d")})
 
-    if positions_sheet_url():
+    api = positions_api_url()
+    if api:
+        c1, c2 = st.columns([1, 3])
+        with c1:
+            if st.button("💾 Save to cloud", type="primary", key="save_cloud"):
+                with st.spinner("Saving to your Google Sheet..."):
+                    ok = _api_save_positions(api, edited)
+                if ok:
+                    st.session_state["pos_df"] = edited.reset_index(drop=True)
+                    st.session_state["pos_ver"] += 1
+                    st.success("Saved — synced to every device (phone + PC).")
+                    st.rerun()
+                else:
+                    st.error("Couldn't save to the sheet. Check your connection and try again.")
+        st.caption("🔄 **Two-way sync** — edit the rows above here (or the Google Sheet directly), then "
+                   "click **💾 Save to cloud**. Changes show on every device, phone and PC. "
+                   "Reload the app to pull edits made elsewhere.")
+    elif positions_sheet_url():
         st.caption("🔄 **Synced from your Google Sheet** — this list is read from your sheet, so it "
                    "shows on every device (incl. your phone). To change holdings, edit the **Google "
                    "Sheet** (the edits here are temporary). Reload to pull the latest.")
