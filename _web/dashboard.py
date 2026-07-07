@@ -22,7 +22,13 @@ import altair as alt
 import strategies
 import markets
 S = strategies  # alias for the indicator helpers (S._ema, S._adx, ...)
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+# On Streamlit Cloud the app runs from the repo root; make all relative data paths
+# (market_data.xlsx, sectors.csv, backtest_results/…) resolve next to this script.
+try:
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+except Exception:
+    pass
 
 try:
     import kite_helper          # optional Zerodha Kite Connect integration
@@ -344,10 +350,15 @@ def main():
         mpick = st.selectbox("Market", mlabels, index=mkeys.index(markets.DEFAULT))
         market = mkeys[mlabels.index(mpick)]
 
-        chs = strategies.choices()
+        style = st.selectbox("Style", strategies.STYLES, index=0,
+                             help="Long Term = position trades (months–years). "
+                                  "Swing = days–weeks–a couple of months.")
+        chs = strategies.choices_by_style(style)
         labels = [lbl for _, lbl in chs]
         keys = [k for k, _ in chs]
-        picked = st.selectbox("Strategy", labels, index=keys.index(strategies.DEFAULT_KEY))
+        dflt = strategies.STYLE_DEFAULT.get(style, keys[0] if keys else None)
+        didx = keys.index(dflt) if dflt in keys else 0
+        picked = st.selectbox("Strategy", labels, index=didx)
         strat = strategies.STRATEGIES[keys[labels.index(picked)]]
 
         symbols = markets.market_symbols(market)
@@ -561,12 +572,16 @@ def render_chart(symbols, names, strat):
     c = d["Close"]
     d["EMA20"], d["EMA50"], d["EMA200"] = S._ema(c, 20), S._ema(c, 50), S._ema(c, 200)
     d["SMA50"], d["SMA150"], d["EMA220"] = S._sma(c, 50), S._sma(c, 150), S._ema(c, 220)
+    d["SMA200"] = S._sma(c, 200)
     d["RSI"] = S._rsi(c, 14)
     d["ADX"] = S._adx(d, 14)
     basis, upper, lower = S._bbands(c, 20, 2.0)
     d["BBu"], d["BBm"], d["BBl"] = upper, basis, lower
     st_line, _ = S._supertrend(d, 10, 3.0)
     d["ST"] = st_line
+    d["E55H"] = d["High"].ewm(span=55, adjust=False).mean()
+    d["E55L"] = d["Low"].ewm(span=55, adjust=False).mean()
+    d["MACDsig"] = S._macd_signal(c)
     d = d.tail(int(months * 21)).copy()
 
     color = alt.condition("datum.Open <= datum.Close",
@@ -599,6 +614,22 @@ def render_chart(symbols, names, strat):
     elif key == "vm_rsi40_support":
         layers += [_ma_line(d, "SMA50", "#1f77b4"), _ma_line(d, "EMA200", "#d62728")]
         lower_panel = "RSI"
+    elif key == "dma_pullback":
+        layers += [_ma_line(d, "SMA50", "#1f77b4"), _ma_line(d, "SMA200", "#d62728")]
+        lower_panel = "RSI"
+    elif key == "minervini":
+        layers += [_ma_line(d, "SMA50", "#1f77b4"), _ma_line(d, "SMA150", "#9467bd"),
+                   _ma_line(d, "SMA200", "#d62728")]
+    elif key in ("kiss_trend", "kiss_reversal"):
+        layers += [_ma_line(d, "E55H", "#1f77b4"), _ma_line(d, "E55L", "#1f77b4")]
+        lower_panel = "MACD"
+    elif key == "bb_reversion":
+        layers += [_ma_line(d, "BBu", "#1f77b4"), _ma_line(d, "BBm", "#999999"),
+                   _ma_line(d, "BBl", "#1f77b4")]
+    elif key == "willr":
+        layers += [_ma_line(d, "SMA200", "#d62728")]
+    elif key == "mom20":
+        layers += [_ma_line(d, "SMA50", "#1f77b4"), _ma_line(d, "SMA200", "#d62728")]
 
     price = alt.layer(*layers).properties(height=380)
     vol = alt.Chart(d).mark_bar().encode(
@@ -625,6 +656,12 @@ def render_chart(symbols, names, strat):
         panels.append(alt.Chart(d2).mark_area(opacity=0.5, color="#26c6da").encode(
             x=alt.X("Date:T", axis=alt.Axis(title=None)),
             y=alt.Y("BBW:Q", title="BB width %")).properties(height=90))
+    elif lower_panel == "MACD":
+        panels.append(alt.layer(
+            alt.Chart(d).mark_line(color="#1d4ed8").encode(
+                x="Date:T", y=alt.Y("MACDsig:Q", title="MACD signal")),
+            alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color="#999999").encode(y="y:Q"),
+        ).properties(height=110))
 
     st.altair_chart(alt.vconcat(*panels).resolve_scale(x="shared"),
                     use_container_width=True)
@@ -841,7 +878,37 @@ def render_compare(market):
 # =====================================================
 # MY POSITIONS TAB — HOLD / SELL + stop level per strategy
 # =====================================================
+def positions_sheet_url():
+    """Published Google-Sheet CSV URL for cross-device positions, if configured."""
+    try:
+        return st.secrets.get("positions_sheet_url")
+    except Exception:
+        return None
+
+
+def _normalize_positions(df):
+    cols = {str(c).lower().strip(): c for c in df.columns}
+    def pick(*keys):
+        for k in keys:
+            for lc, orig in cols.items():
+                if k in lc:
+                    return orig
+        return None
+    cs, cb, cq = pick("symbol", "stock", "scrip"), pick("buy", "price", "avg", "cost"), pick("qty", "quantity", "shares")
+    out = pd.DataFrame()
+    out["Symbol"] = df[cs].astype(str).str.strip() if cs else ""
+    out["Buy Price"] = pd.to_numeric(df[cb], errors="coerce").fillna(0.0) if cb else 0.0
+    out["Qty"] = pd.to_numeric(df[cq], errors="coerce").fillna(0).astype(int) if cq else 0
+    return out[out["Symbol"].astype(str).str.strip().ne("")][["Symbol", "Buy Price", "Qty"]]
+
+
 def _load_positions():
+    url = positions_sheet_url()                 # cross-device source (Google Sheet)
+    if url:
+        try:
+            return _normalize_positions(pd.read_csv(url))
+        except Exception:
+            pass
     if os.path.exists(POSITIONS_FILE):
         try:
             df = pd.read_csv(POSITIONS_FILE)
@@ -937,9 +1004,14 @@ def render_positions(strat, symbols, names):
             "Buy Price": st.column_config.NumberColumn("Buy Price", format="%.2f"),
             "Qty": st.column_config.NumberColumn("Qty", format="%d")})
 
-    _save_positions(edited)   # autosave to disk so it survives refresh / restart
-    st.caption(f"💾 Saved automatically to `{POSITIONS_FILE}` — your entries persist "
-               "across refresh and restarts.")
+    if positions_sheet_url():
+        st.caption("🔄 **Synced from your Google Sheet** — this list is read from your sheet, so it "
+                   "shows on every device (incl. your phone). To change holdings, edit the **Google "
+                   "Sheet** (the edits here are temporary). Reload to pull the latest.")
+    else:
+        _save_positions(edited)   # autosave to disk so it survives refresh / restart
+        st.caption(f"💾 Saved automatically to `{POSITIONS_FILE}` — your entries persist "
+                   "across refresh and restarts.")
 
     # optional real-time LTP from Zerodha
     ltp_map = {}

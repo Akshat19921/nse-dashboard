@@ -101,6 +101,45 @@ def _monthly(df):
     return pd.DataFrame({"Open": o, "High": h, "Low": l, "Close": c}).dropna()
 
 
+def _macd_signal(close, fast=12, slow=26, sig=9):
+    line = close.ewm(span=fast, adjust=False).mean() - close.ewm(span=slow, adjust=False).mean()
+    return line.ewm(span=sig, adjust=False).mean()
+
+
+def _heikin(df):
+    """Heikin-Ashi (ha_open, ha_close) for a frame indexed in time order."""
+    ha_close = (df["Open"] + df["High"] + df["Low"] + df["Close"]) / 4.0
+    o = np.empty(len(df))
+    if len(df) == 0:
+        return pd.Series(dtype=float), pd.Series(dtype=float)
+    o[0] = (float(df["Open"].iloc[0]) + float(df["Close"].iloc[0])) / 2.0
+    hc = ha_close.values
+    for i in range(1, len(o)):
+        o[i] = (o[i - 1] + hc[i - 1]) / 2.0
+    return pd.Series(o, index=df.index), ha_close
+
+
+def _weekly_ha_bull(df):
+    """Daily-aligned boolean: was the last COMPLETED weekly Heikin-Ashi candle bullish?"""
+    w = pd.DataFrame({"Open": df["Open"].resample("W").first(),
+                      "High": df["High"].resample("W").max(),
+                      "Low":  df["Low"].resample("W").min(),
+                      "Close": df["Close"].resample("W").last()}).dropna()
+    if len(w) < 2:
+        return pd.Series(False, index=df.index)
+    ho, hc = _heikin(w)
+    bull = (hc > ho).shift(1).fillna(False)          # prior completed week (no lookahead)
+    return bull.reindex(df.index, method="ffill").fillna(False)
+
+
+def _as_dt(df):
+    """Return df indexed by a DatetimeIndex (handles a 'Date' column or existing index)."""
+    if isinstance(df.index, pd.DatetimeIndex):
+        return df
+    idx = pd.to_datetime(df["Date"]) if "Date" in df.columns else pd.to_datetime(df.index)
+    return df.set_index(pd.DatetimeIndex(idx))
+
+
 # =====================================================
 # STRATEGY 0 — 1% Club "Strong Stock Breakout"  (also backtested)
 # =====================================================
@@ -366,6 +405,217 @@ def sig_s3_squeeze(df):
 
 
 # =====================================================
+# STRATEGY 6 — 200-DMA Pullback (buy dips to a rising 200-DMA in an uptrend)
+# =====================================================
+def eval_dma_pullback(df):
+    if len(df) < 210:
+        return None
+    c = df["Close"]
+    s50 = _sma(c, 50); s200 = _sma(c, 200); rsi = _rsi(c, 14)
+    close = float(c.iloc[-1]); sma50 = float(s50.iloc[-1]); sma200 = float(s200.iloc[-1])
+    r = float(rsi.iloc[-1])
+    rising = pd.notna(s200.iloc[-21]) and sma200 > float(s200.iloc[-21])
+    above200 = close > sma200
+    near50 = close <= sma50 * 1.02
+    cross = r > 40 and float(rsi.iloc[-2]) <= 40
+    selected = above200 and rising
+    entry = selected and near50 and cross
+    return {
+        "Close": round(close, 2), "SMA50": round(sma50, 2), "SMA200": round(sma200, 2),
+        "RSI(14)": round(r, 1), "% above 200DMA": round((close / sma200 - 1) * 100, 1),
+        "200DMA rising": rising, "Above 200DMA": above200, "Near 50DMA": near50,
+        "RSI crossed >40": cross, "Selected": selected, "ENTRY SIGNAL": entry,
+    }
+
+
+def sig_dma_pullback(df):
+    c = df["Close"]; s50 = _sma(c, 50); s200 = _sma(c, 200); rsi = _rsi(c, 14)
+    rising = s200 > s200.shift(20)
+    near = (c > s200) & (c <= s50 * 1.02) & rising
+    recover = (rsi > 40) & (rsi.shift(1) <= 40)
+    entry = (near & recover).fillna(False)
+    exit_ = (c < s200).fillna(False)
+    return pd.DataFrame({"entry": entry, "exit": exit_})
+
+
+# =====================================================
+# STRATEGY 7 — Minervini Trend Template (SEPA) + 20-day-high breakout
+# =====================================================
+def eval_minervini(df):
+    if len(df) < WEEK_52 + 1:
+        return None
+    c = df["Close"]
+    s50 = _sma(c, 50); s150 = _sma(c, 150); s200 = _sma(c, 200)
+    hi52 = c.rolling(WEEK_52).max(); lo52 = df["Low"].rolling(WEEK_52).min()
+    close = float(c.iloc[-1])
+    sma50 = float(s50.iloc[-1]); sma150 = float(s150.iloc[-1]); sma200 = float(s200.iloc[-1])
+    lo = float(lo52.iloc[-1]); hi = float(hi52.iloc[-1])
+    rising = pd.notna(s200.iloc[-21]) and sma200 > float(s200.iloc[-21])
+    trend = close > sma50 and sma50 > sma150 and sma150 > sma200 and rising
+    rng = close >= 1.30 * lo and close >= 0.75 * hi
+    hi20 = float(c.rolling(20).max().iloc[-1])
+    new_high = close >= hi20
+    selected = trend and rng
+    entry = selected and new_high
+    return {
+        "Close": round(close, 2), "SMA50": round(sma50, 2), "SMA150": round(sma150, 2),
+        "SMA200": round(sma200, 2), "52W High": round(hi, 2), "52W Low": round(lo, 2),
+        "% above 52W low": round((close / lo - 1) * 100, 1),
+        "% below 52W high": round((close / hi - 1) * 100, 1),
+        "Trend stack (50>150>200↑)": trend, "In 25% range": rng, "New 20D high": new_high,
+        "Selected": selected, "ENTRY SIGNAL": entry,
+    }
+
+
+def sig_minervini(df):
+    c = df["Close"]; s50 = _sma(c, 50); s150 = _sma(c, 150); s200 = _sma(c, 200)
+    hi52 = c.rolling(WEEK_52).max(); lo52 = df["Low"].rolling(WEEK_52).min()
+    trend = (c > s50) & (s50 > s150) & (s150 > s200) & (s200 > s200.shift(20))
+    rng = (c >= 1.30 * lo52) & (c >= 0.75 * hi52)
+    breakout = c >= c.rolling(20).max()
+    entry = (trend & rng & breakout).fillna(False)
+    exit_ = (c < s150).fillna(False)
+    return pd.DataFrame({"entry": entry, "exit": exit_})
+
+
+# =====================================================
+# STRATEGY 8 & 9 — KISS / "Swing Systematic" (trend + reversal LONG)
+#   55-EMA(High/Low) band · MACD(12,26,9) signal vs zero · Heikin-Ashi colour
+#   (daily timeframe; weekly Heikin-Ashi = trend). Dhan Signal MA dropped.
+# =====================================================
+def _kiss_frames(df):
+    d = _as_dt(df)
+    c = d["Close"]
+    ema_hi = d["High"].ewm(span=55, adjust=False).mean()
+    ema_lo = d["Low"].ewm(span=55, adjust=False).mean()
+    sig = _macd_signal(c)
+    ha_o, ha_c = _heikin(d)
+    wbull = _weekly_ha_bull(d)
+    return d, c, ema_hi, ema_lo, sig, (ha_c > ha_o), wbull
+
+
+def eval_kiss_trend(df):
+    if len(df) < 120:
+        return None
+    d, c, ema_hi, ema_lo, sig, ha_bull, wbull = _kiss_frames(df)
+    close = float(c.iloc[-1]); ehi = float(ema_hi.iloc[-1]); elo = float(ema_lo.iloc[-1])
+    s0 = float(sig.iloc[-1]); s1 = float(sig.iloc[-2]); hb = bool(ha_bull.iloc[-1]); wb = bool(wbull.iloc[-1])
+    above = close > ehi
+    selected = above and s0 > 0 and hb and wb
+    entry = (s0 > 0 and s1 <= 0) and above and hb and wb
+    return {
+        "Close": round(close, 2), "55EMA Hi": round(ehi, 2), "55EMA Lo": round(elo, 2),
+        "MACD signal": round(s0, 2), "Above band": above, "MACD>0": s0 > 0,
+        "HA bullish": hb, "Weekly up": wb, "Selected": selected, "ENTRY SIGNAL": bool(entry),
+    }
+
+
+def sig_kiss_trend(df):
+    d, c, ema_hi, ema_lo, sig, ha_bull, wbull = _kiss_frames(df)
+    above = c > ema_hi
+    cross_up = (sig > 0) & (sig.shift(1) <= 0)
+    entry = (cross_up & above & ha_bull & wbull).fillna(False)
+    exit_ = (((sig < 0) & (sig.shift(1) >= 0)) | (c < ema_lo)).fillna(False)
+    return pd.DataFrame({"entry": entry.values, "exit": exit_.values})
+
+
+def eval_kiss_reversal(df):
+    if len(df) < 120:
+        return None
+    d, c, ema_hi, ema_lo, sig, ha_bull, wbull = _kiss_frames(df)
+    close = float(c.iloc[-1]); elo = float(ema_lo.iloc[-1])
+    s0 = float(sig.iloc[-1]); s1 = float(sig.iloc[-2]); hb = bool(ha_bull.iloc[-1])
+    near = elo * 0.95 <= close <= elo * 1.03
+    turn_up = s0 < 0 and s0 > s1
+    selected = (s0 < 0) and near
+    entry = turn_up and near and hb
+    return {
+        "Close": round(close, 2), "55EMA Lo": round(elo, 2), "MACD signal": round(s0, 2),
+        "Near lower band": near, "MACD turning up (<0)": turn_up, "HA bullish": hb,
+        "Selected": selected, "ENTRY SIGNAL": bool(entry),
+    }
+
+
+def sig_kiss_reversal(df):
+    d, c, ema_hi, ema_lo, sig, ha_bull, wbull = _kiss_frames(df)
+    near = (c >= ema_lo * 0.95) & (c <= ema_lo * 1.03)
+    turn_up = (sig < 0) & (sig > sig.shift(1))
+    entry = (turn_up & near & ha_bull).fillna(False)
+    exit_ = (((sig < 0) & (sig.shift(1) >= 0)) | (c < ema_lo * 0.95)).fillna(False)
+    return pd.DataFrame({"entry": entry.values, "exit": exit_.values})
+
+
+# =====================================================
+# STRATEGY 10-12 — short SWING systems (1-2 week hold)
+# =====================================================
+def _willr(df, n=10):
+    hh = df["High"].rolling(n).max(); ll = df["Low"].rolling(n).min()
+    return -100 * (hh - df["Close"]) / (hh - ll).replace(0, np.nan)
+
+
+def eval_bb_reversion(df):
+    if len(df) < 210:
+        return None
+    c = df["Close"]; s200 = _sma(c, 200); basis, upper, lower = _bbands(c, 20, 2.0)
+    close = float(c.iloc[-1]); lo = float(lower.iloc[-1]); mid = float(basis.iloc[-1])
+    up = close > float(s200.iloc[-1])
+    below = close < lo
+    return {"Close": round(close, 2), "Lower BB": round(lo, 2), "Mid (20SMA)": round(mid, 2),
+            "200SMA": round(float(s200.iloc[-1]), 2), "Uptrend": up, "Below lower band": below,
+            "Selected": up, "ENTRY SIGNAL": bool(up and below)}
+
+
+def sig_bb_reversion(df):
+    c = df["Close"]; s200 = _sma(c, 200); basis, upper, lower = _bbands(c, 20, 2.0)
+    entry = ((c > s200) & (c < lower)).fillna(False)
+    exit_ = (c >= basis).fillna(False)
+    return pd.DataFrame({"entry": entry, "exit": exit_})
+
+
+def eval_willr(df):
+    if len(df) < 210:
+        return None
+    c = df["Close"]; s200 = _sma(c, 200); wr = _willr(df, 10)
+    close = float(c.iloc[-1]); w = float(wr.iloc[-1]); up = close > float(s200.iloc[-1])
+    return {"Close": round(close, 2), "Williams %R": round(w, 1),
+            "200SMA": round(float(s200.iloc[-1]), 2), "Uptrend": up, "Oversold (<-90)": w < -90,
+            "Selected": up, "ENTRY SIGNAL": bool(up and w < -90)}
+
+
+def sig_willr(df):
+    c = df["Close"]; s200 = _sma(c, 200); wr = _willr(df, 10)
+    entry = ((c > s200) & (wr < -90)).fillna(False)
+    exit_ = (wr > -30).fillna(False)
+    return pd.DataFrame({"entry": entry, "exit": exit_})
+
+
+def eval_mom20(df):
+    if len(df) < 210:
+        return None
+    c = df["Close"]; s50 = _sma(c, 50); hi20 = c.rolling(20).max()
+    v = df["Volume"] if "Volume" in df.columns else None
+    vavg = _sma(v, 20) if v is not None else None
+    close = float(c.iloc[-1]); newhi = close >= float(hi20.iloc[-1])
+    trend = close > float(s50.iloc[-1])
+    vol_ok = bool(v is not None and float(v.iloc[-1]) > float(vavg.iloc[-1])) if v is not None else True
+    return {"Close": round(close, 2), "20D High": round(float(hi20.iloc[-1]), 2),
+            "50SMA": round(float(s50.iloc[-1]), 2), "New 20D high": newhi,
+            "Above 50SMA": trend, "Vol>avg": vol_ok,
+            "Selected": trend, "ENTRY SIGNAL": bool(newhi and trend and vol_ok)}
+
+
+def sig_mom20(df):
+    c = df["Close"]; s50 = _sma(c, 50); hi20 = c.rolling(20).max()
+    if "Volume" in df.columns:
+        v = df["Volume"]; vol_ok = v > _sma(v, 20)
+    else:
+        vol_ok = pd.Series(True, index=c.index)
+    entry = ((c >= hi20) & (c > s50) & vol_ok).fillna(False)
+    exit_ = (c < s50).fillna(False)
+    return pd.DataFrame({"entry": entry, "exit": exit_})
+
+
+# =====================================================
 # REGISTRY
 # =====================================================
 _EMA = "MAExp@tv-basicstudies"
@@ -437,9 +687,127 @@ STRATEGIES = {
             "_38 is the edge of tolerance; the healthy centre of gravity is 39–41._"
         ),
     },
+    "dma_pullback": {
+        "key": "dma_pullback", "name": "200-DMA Pullback", "author": "Trend Pullback",
+        "min_bars": 210, "sort_col": "RSI(14)", "sort_asc": True,
+        "evaluate": eval_dma_pullback, "signals": sig_dma_pullback, "stop_pct": 0.10,
+        "tv_studies": [{"id": _SMA, "inputs": {"length": 50}},
+                       {"id": _SMA, "inputs": {"length": 200}},
+                       {"id": _RSI, "inputs": {"length": 14}}],
+        "description": (
+            "Buy a healthy **dip to a rising 200-DMA** inside a long-term uptrend, then "
+            "hold for the next leg (position trade, weeks–months).\n\n"
+            "**Watchlist (Selected):** Close above the 200-DMA **and** the 200-DMA is rising "
+            "(higher than 20 days ago) — i.e. a genuine uptrend.\n"
+            "**Entry trigger:** price has pulled back near the 50-DMA (≤2% above it) and "
+            "**RSI(14) crosses back above 40** (momentum turning up from the dip).\n"
+            "**Exit / stop:** close **below the 200-DMA** (trend broken), or a 10% hard stop "
+            "from entry. Backtest: +140% / 5y, +11% last yr, CAGR 19%, Sharpe 1.41 on LMC250."
+        ),
+    },
+    "minervini": {
+        "key": "minervini", "name": "Minervini Trend Template", "author": "Minervini (SEPA)",
+        "min_bars": WEEK_52 + 1, "sort_col": "% above 52W low", "sort_asc": False,
+        "evaluate": eval_minervini, "signals": sig_minervini, "stop_pct": 0.12,
+        "tv_studies": [{"id": _SMA, "inputs": {"length": 50}},
+                       {"id": _SMA, "inputs": {"length": 150}},
+                       {"id": _SMA, "inputs": {"length": 200}}],
+        "description": (
+            "Mark Minervini's **Trend Template** (from *Trade Like a Stock Market Wizard*): "
+            "own only true market leaders in a confirmed Stage-2 uptrend. Long holds (months+).\n\n"
+            "**Watchlist (Selected) — the template, all true:** Close>50-DMA, 50>150>200-DMA, "
+            "200-DMA rising, price ≥30% above its 52-week low and within 25% of its 52-week high.\n"
+            "**Entry trigger:** while the template holds, a **new 20-day high** (fresh breakout).\n"
+            "**Exit / stop:** close below the **150-DMA (30-week)**, or a 12% hard stop from entry.\n"
+            "Backtest: +183% / 5y, CAGR 23%, Sharpe 1.68 on LMC250 — best long-horizon compounder "
+            "(last-yr +5.8% only because mid-caps were broadly soft that window)."
+        ),
+    },
+    "kiss_trend": {
+        "key": "kiss_trend", "name": "KISS Swing — Trend LONG", "author": "Swing Systematic",
+        "min_bars": 120, "sort_col": "MACD signal", "sort_asc": False,
+        "evaluate": eval_kiss_trend, "signals": sig_kiss_trend, "stop_pct": 0.06,
+        "tv_studies": [{"id": _EMA, "inputs": {"length": 55}},
+                       {"id": "MACD@tv-basicstudies"}],
+        "description": (
+            "Trend-following swing (the masterclass's main engine), **daily approximation** "
+            "of his 1H/4H + weekly setup — equity only.\n\n"
+            "**Watchlist (Selected):** price **above** the 55-EMA(High/Low) band, MACD(12,26,9) "
+            "signal **above zero**, daily Heikin-Ashi **green**, and the weekly Heikin-Ashi **up**.\n"
+            "**Entry trigger:** the fresh event — MACD signal **crosses above zero** while all the "
+            "above hold (confirmation, not FOMO).\n"
+            "**Exit / stop:** MACD signal crosses back **below zero**, or close **below the lower "
+            "band**; 6% protective stop. He targets 1:3 RR and a weekly-close time exit.\n"
+            "_Trade-level 5y test (LMC250, daily proxy): ~1,032 trades, 48% win, profit-factor 1.31._\n"
+            "_Note: real version uses 1H/4H candles we don't have — treat as an approximation._"
+        ),
+    },
+    "kiss_reversal": {
+        "key": "kiss_reversal", "name": "KISS Swing — Reversal LONG", "author": "Swing Systematic",
+        "min_bars": 120, "sort_col": "MACD signal", "sort_asc": True,
+        "evaluate": eval_kiss_reversal, "signals": sig_kiss_reversal, "stop_pct": 0.06,
+        "tv_studies": [{"id": _EMA, "inputs": {"length": 55}},
+                       {"id": "MACD@tv-basicstudies"}],
+        "description": (
+            "Counter-trend reversal swing (his ~30% allocation, smaller size). **Daily proxy**, "
+            "equity only.\n\n"
+            "**Watchlist (Selected):** MACD signal still **below zero** and price pushing into the "
+            "**lower-band** area (the turning point). Trend filters are intentionally ignored here.\n"
+            "**Entry trigger:** MACD signal **turns up while below zero** near the lower band with a "
+            "green Heikin-Ashi candle — deploy partial size, add as MACD clears zero.\n"
+            "**Exit / stop:** MACD signal crosses below zero, or close below the lower band; 6% stop. "
+            "1:3 RR target.\n"
+            "_Trade-level 5y test (LMC250, daily proxy): ~5,742 trades, 43% win, profit-factor 1.11 "
+            "(high-frequency, thin edge — the riskier book)._"
+        ),
+    },
+    "bb_reversion": {
+        "key": "bb_reversion", "name": "Bollinger Mean-Reversion", "author": "Connors/Bollinger",
+        "min_bars": 210, "sort_col": "Close", "sort_asc": True,
+        "evaluate": eval_bb_reversion, "signals": sig_bb_reversion, "stop_pct": 0.05,
+        "tv_studies": [{"id": _BB, "inputs": {"length": 20}}, {"id": _SMA, "inputs": {"length": 200}}],
+        "description": (
+            "Short-swing mean-reversion (~5-day hold). Buy panic dips in an uptrend, sell the "
+            "snap-back to the mean.\n\n"
+            "**Watchlist (Selected):** Close above the 200-SMA (uptrend intact).\n"
+            "**Entry trigger:** Close drops **below the lower Bollinger Band** (20, 2σ).\n"
+            "**Target:** the **20-SMA / mid-band** (or +6%). **Stop:** −5%. Max ~10 days.\n"
+            "_5y test (LMC250, after 0.25% costs): ~2,358 trades, 54% win, ~5-day hold, "
+            "expectancy +0.20%/trade, PF 1.10 — the only short-swing system that stayed net-positive._"
+        ),
+    },
+    "willr": {
+        "key": "willr", "name": "Williams %R Bounce", "author": "Larry Williams",
+        "min_bars": 210, "sort_col": "Williams %R", "sort_asc": True,
+        "evaluate": eval_willr, "signals": sig_willr, "stop_pct": 0.04,
+        "tv_studies": [{"id": _SMA, "inputs": {"length": 200}}],
+        "description": (
+            "Short-swing oversold bounce inside an uptrend (~4-day hold).\n\n"
+            "**Watchlist (Selected):** Close above the 200-SMA.\n"
+            "**Entry trigger:** **Williams %R(10) < −90** (deeply oversold).\n"
+            "**Target:** %R recovers **above −30** (or +6%). **Stop:** −4%. Max ~10 days.\n"
+            "_5y test (after costs): ~5,480 trades, 48% win, ~4-day hold, expectancy ≈ break-even "
+            "(PF 0.97) — marginal; include for comparison._"
+        ),
+    },
+    "mom20": {
+        "key": "mom20", "name": "20-Day-High Momentum Swing", "author": "Breakout (ORB/Darvas)",
+        "min_bars": 210, "sort_col": "Close", "sort_asc": False,
+        "evaluate": eval_mom20, "signals": sig_mom20, "stop_pct": 0.04,
+        "tv_studies": [{"id": _SMA, "inputs": {"length": 50}}, {"id": _SMA, "inputs": {"length": 200}}],
+        "description": (
+            "Short momentum-breakout swing (~5-day hold).\n\n"
+            "**Watchlist (Selected):** Close above the 50-SMA.\n"
+            "**Entry trigger:** new **20-day high** with above-average volume.\n"
+            "**Target:** **+8%**. **Stop:** −4% (also exits on a close below the 50-SMA). Max ~10 days.\n"
+            "_5y test (after costs): ~9,680 trades, 39% win, ~5-day hold, expectancy −0.13% (PF 0.94) "
+            "— low win-rate breakout; the big winners didn't quite cover the chop in this window._"
+        ),
+    },
 }
 
-ORDER = ["onepct_breakout", "s1_rsi_pullback", "s3_squeeze", "vm_rsi40_support"]
+ORDER = ["onepct_breakout", "dma_pullback", "minervini", "s3_squeeze",
+         "kiss_trend", "bb_reversion", "willr", "mom20"]
 DEFAULT_KEY = "onepct_breakout"
 
 
@@ -450,6 +818,30 @@ def label(key):
 
 def choices():
     return [(k, label(k)) for k in ORDER]
+
+
+# ---- trading STYLE bracket: Long Term (position, months–years) vs Swing (days–weeks) ----
+STYLES = ["Long Term", "Swing"]
+STYLE = {
+    "onepct_breakout": "Long Term",
+    "dma_pullback": "Long Term",
+    "minervini": "Long Term",
+    "s3_squeeze": "Swing",
+    "kiss_trend": "Swing",
+    "kiss_reversal": "Swing",
+    "bb_reversion": "Swing",
+    "willr": "Swing",
+    "mom20": "Swing",
+}
+STYLE_DEFAULT = {"Long Term": "onepct_breakout", "Swing": "kiss_trend"}
+
+
+def style_of(key):
+    return STYLE.get(key, "Long Term")
+
+
+def choices_by_style(style):
+    return [(k, label(k)) for k in ORDER if STYLE.get(k) == style]
 
 
 # =====================================================
@@ -517,6 +909,33 @@ def position_advice(key, df, entry_price):
         except Exception:
             stop = hard
         reason = reason or "exit if monthly RSI<37 (or 2 closes <38) / below monthly 20-SMA"
+    elif key == "dma_pullback":
+        sma200 = float(_sma(c, 200).iloc[-1])
+        stop = max(sma200, hard) if hard else sma200       # exit below the 200-DMA
+        reason = reason or ("below 200 DMA — trend broken" if close < sma200
+                            else "hold while above the 200 DMA")
+    elif key == "minervini":
+        sma150 = float(_sma(c, 150).iloc[-1])
+        stop = max(sma150, hard) if hard else sma150       # exit below 150-DMA (30-week)
+        reason = reason or ("below 150 DMA — Stage-2 broken" if close < sma150
+                            else "hold while above the 150 DMA")
+    elif key in ("kiss_trend", "kiss_reversal"):
+        band_lo = float(df["Low"].ewm(span=55, adjust=False).mean().iloc[-1])
+        stop = max(band_lo, hard) if hard else band_lo     # exit below the 55-EMA lower band
+        reason = reason or ("MACD signal turned down / below lower band"
+                            if close < band_lo else "hold while MACD>0 and above the band")
+    elif key == "bb_reversion":
+        mid = float(_bbands(c, 20, 2.0)[0].iloc[-1])
+        stop = hard
+        reason = reason or (f"SELL at the 20-SMA target ({mid:.0f}) or -5% stop")
+    elif key == "willr":
+        stop = hard
+        reason = reason or "SELL when %R recovers above -30, or -4% stop"
+    elif key == "mom20":
+        sma50 = float(_sma(c, 50).iloc[-1])
+        stop = max(sma50, hard) if hard else sma50
+        reason = reason or ("below 50-SMA — momentum lost" if close < sma50
+                            else "+8% target; trail the 50-SMA, -4% stop")
 
     return {
         "Close": round(close, 2),
